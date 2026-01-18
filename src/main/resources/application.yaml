@@ -3,6 +3,9 @@ spring:
     name: SimpleBalanceMCPClient
   thymeleaf:
     cache: false
+  mvc:
+    async:
+      request-timeout: 300000
   ai:
     openai:
       api-key: ${GROQ_API_KEY}

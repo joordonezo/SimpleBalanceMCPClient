@@ -1,75 +1,165 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>AI Chat</title>
-
+    <meta charset="UTF-8">
+    <title>Chat con Streaming</title>
     <style>
-        body { font-family: Arial; }
-        .chat { max-width: 800px; margin: auto; }
-        .msg { margin: 8px 0; }
-        .user { font-weight: bold; }
-        .ai { color: #0066cc; white-space: pre-wrap; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        #chatContainer {
+            border: 1px solid #ccc;
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            text-align: right;
+        }
+        .ai-message {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            white-space: pre-wrap !important; /* Fuerza preservar espacios */
+            word-wrap: break-word;
+            font-family: inherit;
+        }
+        #inputContainer {
+            display: flex;
+            gap: 10px;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+        #sendBtn {
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #sendBtn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .typing {
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
+<h1>Chat con IA (Streaming)</h1>
 
-<div class="chat">
-    <h2>Chat MCP</h2>
+<div id="chatContainer"></div>
 
-    <div id="messages"></div>
-
-    <form id="chatForm">
-        <input id="messageInput" style="width: 80%" autofocus />
-        <button type="submit">Enviar</button>
-    </form>
+<div id="inputContainer">
+    <input type="text" id="messageInput" placeholder="Escribe tu mensaje...">
+    <button id="sendBtn">Enviar</button>
 </div>
 
 <script>
-    const form = document.getElementById("chatForm");
-    const input = document.getElementById("messageInput");
-    const messages = document.getElementById("messages");
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
 
-    let eventSource = null;
+    function addMessage(content, isUser) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+        messageDiv.style.whiteSpace = 'pre-wrap'; // Asegurar espacios
+        messageDiv.textContent = content;
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return messageDiv;
+    }
 
-    form.addEventListener("submit", function (e) {
-        e.preventDefault();
+    function streamMessage(userMessage) {
+        sendBtn.disabled = true;
+        messageInput.disabled = true;
 
-        const text = input.value.trim();
-        if (!text) return;
+        addMessage(userMessage, true);
 
-        // Mensaje del usuario
-        messages.innerHTML += `
-            <div class="msg user">Tú:</div>
-            <div class="msg">${text}</div>
-        `;
+        const aiMessageDiv = document.createElement('div');
+        aiMessageDiv.className = 'message ai-message';
+        aiMessageDiv.style.whiteSpace = 'pre-wrap'; // Crucial: preservar espacios
+        aiMessageDiv.innerHTML = '<span class="typing">Escribiendo...</span>';
+        chatContainer.appendChild(aiMessageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
 
-        // Contenedor respuesta IA
-        const aiDiv = document.createElement("div");
-        aiDiv.className = "msg ai";
-        messages.appendChild(aiDiv);
-
-        input.value = "";
-
-        // Cerrar stream previo
-        if (eventSource) {
-            eventSource.close();
-        }
-
-        // SSE STREAM
-        eventSource = new EventSource(
-            `/chat/stream?message=${encodeURIComponent(text)}`
+        const eventSource = new EventSource(
+            `/chat/stream?message=${encodeURIComponent(userMessage)}`
         );
 
-        eventSource.onmessage = function (event) {
-            aiDiv.textContent += event.data;
-            messages.scrollTop = messages.scrollHeight;
+        let fullResponse = '';
+        let isFirstChunk = true;
+
+        eventSource.onmessage = function(event) {
+            if (isFirstChunk) {
+                aiMessageDiv.innerHTML = '';
+                isFirstChunk = false;
+            }
+
+            fullResponse += event.data;
+
+            aiMessageDiv.style.whiteSpace = 'pre-wrap';
+            aiMessageDiv.textContent = fullResponse;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         };
 
-        eventSource.onerror = function () {
+        eventSource.onerror = function(error) {
+            console.error('Error en streaming:', error);
             eventSource.close();
-        };
-    });
-</script>
 
+            if (fullResponse === '') {
+                aiMessageDiv.style.color = 'red';
+                aiMessageDiv.textContent = 'Error al recibir respuesta';
+            }
+
+            sendBtn.disabled = false;
+            messageInput.disabled = false;
+            messageInput.focus();
+        };
+
+        // Spring cierra la conexión automáticamente al terminar
+        let checkInterval = setInterval(() => {
+            if (eventSource.readyState === EventSource.CLOSED) {
+                eventSource.close();
+                clearInterval(checkInterval);
+                sendBtn.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }, 100);
+    }
+
+    sendBtn.addEventListener('click', function() {
+        const message = messageInput.value.trim();
+        if (message) {
+            streamMessage(message);
+            messageInput.value = '';
+        }
+    });
+
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !sendBtn.disabled) {
+            sendBtn.click();
+        }
+    });
+
+    messageInput.focus();
+</script>
 </body>
 </html>
