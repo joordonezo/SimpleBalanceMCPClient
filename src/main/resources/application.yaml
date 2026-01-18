@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: SimpleBalanceMCPClient
+  thymeleaf:
+    cache: false
+  ai:
+    openai:
+      api-key: ${GROQ_API_KEY}
+      base-url: ${GROQ_BASE_URL:https://api.groq.com/openai}
+      chat:
+        options:
+          model: llama-3.3-70b-versatile
+    mcp:
+      client:
+        name: SimpleBalanceMCPClient
+        version: 1.0.0
+        toolcallback:
+          enabled: true
+        streamable-http:
+          connections:
+            SimpleBalanceMCPServer:
+              url: ${MCP_SERVER_URL:http://localhost:8080/mcp}

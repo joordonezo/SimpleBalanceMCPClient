@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>AI Chat</title>
+
+    <style>
+        body { font-family: Arial; }
+        .chat { max-width: 800px; margin: auto; }
+        .msg { margin: 8px 0; }
+        .user { font-weight: bold; }
+        .ai { color: #0066cc; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+<div class="chat">
+    <h2>Chat MCP</h2>
+
+    <div id="messages"></div>
+
+    <form id="chatForm">
+        <input id="messageInput" style="width: 80%" autofocus />
+        <button type="submit">Enviar</button>
+    </form>
+</div>
+
+<script>
+    const form = document.getElementById("chatForm");
+    const input = document.getElementById("messageInput");
+    const messages = document.getElementById("messages");
+
+    let eventSource = null;
+
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Mensaje del usuario
+        messages.innerHTML += `
+            <div class="msg user">Tú:</div>
+            <div class="msg">${text}</div>
+        `;
+
+        // Contenedor respuesta IA
+        const aiDiv = document.createElement("div");
+        aiDiv.className = "msg ai";
+        messages.appendChild(aiDiv);
+
+        input.value = "";
+
+        // Cerrar stream previo
+        if (eventSource) {
+            eventSource.close();
+        }
+
+        // SSE STREAM
+        eventSource = new EventSource(
+            `/chat/stream?message=${encodeURIComponent(text)}`
+        );
+
+        eventSource.onmessage = function (event) {
+            aiDiv.textContent += event.data;
+            messages.scrollTop = messages.scrollHeight;
+        };
+
+        eventSource.onerror = function () {
+            eventSource.close();
+        };
+    });
+</script>
+
+</body>
+</html>

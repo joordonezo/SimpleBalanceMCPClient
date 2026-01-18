@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8083:8080"
+    restart: always
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_BASE_URL: ${GROQ_BASE_URL}
+      MCP_SERVER_URL: ${MCP_SERVER_URL}
