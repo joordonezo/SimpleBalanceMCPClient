@@ -1,4 +1,4 @@
-name: CD MCP application
+name: CD MCP Client application
 on:
   push:
     branches:
