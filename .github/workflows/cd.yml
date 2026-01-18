@@ -42,7 +42,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          envs: API_URL
+          envs: GROQ_API_KEY,GROQ_BASE_URL,MCP_SERVER_URL
           script: |
             cd ${{ secrets.APP_DIR }}
             docker compose down
