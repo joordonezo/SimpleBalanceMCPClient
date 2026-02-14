@@ -1,3 +1,5 @@
+server:
+  port: ${SERVER_PORT:8083}
 spring:
   application:
     name: SimpleBalanceMCPClient
@@ -15,14 +17,33 @@ spring:
           model: llama-3.3-70b-versatile
     mcp:
       client:
+        type: SYNC
         name: SimpleBalanceMCPClient
         version: 1.0.0
+        initialized: false
+        request-timeout: 30s
         toolcallback:
           enabled: true
         streamable-http:
           connections:
             SimpleBalanceMCPServer:
-              url: ${MCP_SERVER_URL:http://localhost:8080/mcp}
+              url: ${MCP_SERVER_URL:http://localhost:8082/mcp}
+
+  # OAuth2 Client Credentials for MCP Server authentication
+  security:
+    oauth2:
+      client:
+        registration:
+          mcp-auth:
+            client-id: ${CLIENT_ID:mcp-client}
+            client-secret: ${CLIENT_SECRET:mcp-client-secret}
+            authorization-grant-type: client_credentials
+            client-authentication-method: client_secret_basic
+            scope: openid,profile,read
+            provider: mcp-auth
+        provider:
+          mcp-auth:
+            token-uri: ${TOKEN_URL:http://localhost:9000/oauth2/token}
 
 management:
   endpoints:
