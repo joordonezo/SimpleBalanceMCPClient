@@ -38,6 +38,11 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_BASE_URL: ${{ secrets.GROQ_BASE_URL }}
           MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL }}
+          API_URL: ${{ secrets.API_URL }}
+          ISSUER_URL: ${{ secrets.ISSUER_URL }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          TOKEN_URL: ${{ secrets.TOKEN_URL }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
