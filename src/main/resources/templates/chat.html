@@ -94,55 +94,84 @@
 
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = 'message ai-message';
-        aiMessageDiv.style.whiteSpace = 'pre-wrap'; // Crucial: preservar espacios
+        aiMessageDiv.style.whiteSpace = 'pre-wrap';
         aiMessageDiv.innerHTML = '<span class="typing">Escribiendo...</span>';
         chatContainer.appendChild(aiMessageDiv);
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
-        const eventSource = new EventSource(
-            `/chat/stream?message=${encodeURIComponent(userMessage)}`
-        );
+        const url = `/chat/stream?message=${encodeURIComponent(userMessage)}`;
 
-        let fullResponse = '';
-        let isFirstChunk = true;
-
-        eventSource.onmessage = function(event) {
-            if (isFirstChunk) {
-                aiMessageDiv.innerHTML = '';
-                isFirstChunk = false;
+        fetch(url, {
+            headers: { 'Accept': 'text/event-stream' }
+        }).then(response => {
+            if (!response.ok) {
+                return response.text().then(body => {
+                    throw new Error(`HTTP ${response.status}: ${body}`);
+                });
             }
 
-            fullResponse += event.data;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = '';
+            let isFirstChunk = true;
 
-            aiMessageDiv.style.whiteSpace = 'pre-wrap';
-            aiMessageDiv.textContent = fullResponse;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        };
+            function read() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        // Si nunca recibimos datos, mostrar error
+                        if (fullResponse === '') {
+                            aiMessageDiv.style.color = 'red';
+                            aiMessageDiv.textContent = 'No se recibio respuesta del servidor.';
+                        }
+                        sendBtn.disabled = false;
+                        messageInput.disabled = false;
+                        messageInput.focus();
+                        return;
+                    }
 
-        eventSource.onerror = function(error) {
-            console.error('Error en streaming:', error);
-            eventSource.close();
+                    const text = decoder.decode(value, { stream: true });
+                    const lines = text.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data:')) {
+                            const data = line.substring(5);
+                            if (isFirstChunk) {
+                                aiMessageDiv.innerHTML = '';
+                                isFirstChunk = false;
+                            }
 
-            if (fullResponse === '') {
-                aiMessageDiv.style.color = 'red';
-                aiMessageDiv.textContent = 'Error al recibir respuesta';
+                            // Detectar si el servidor envio un mensaje de error
+                            if (fullResponse === '' && data.startsWith('Error:')) {
+                                aiMessageDiv.style.color = 'red';
+                            }
+
+                            fullResponse += data;
+                            aiMessageDiv.textContent = fullResponse;
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }
+                    }
+
+                    read();
+                }).catch(err => {
+                    console.error('Error leyendo stream:', err);
+                    if (fullResponse === '') {
+                        aiMessageDiv.style.color = 'red';
+                        aiMessageDiv.textContent = 'Error al recibir respuesta: ' + err.message;
+                    }
+                    sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    messageInput.focus();
+                });
             }
 
+            read();
+        }).catch(err => {
+            console.error('Error en la peticion:', err);
+            aiMessageDiv.style.color = 'red';
+            aiMessageDiv.textContent = 'Error al conectar: ' + err.message;
             sendBtn.disabled = false;
             messageInput.disabled = false;
             messageInput.focus();
-        };
-
-        // Spring cierra la conexión automáticamente al terminar
-        let checkInterval = setInterval(() => {
-            if (eventSource.readyState === EventSource.CLOSED) {
-                eventSource.close();
-                clearInterval(checkInterval);
-                sendBtn.disabled = false;
-                messageInput.disabled = false;
-                messageInput.focus();
-            }
-        }, 100);
+        });
     }
 
     sendBtn.addEventListener('click', function() {

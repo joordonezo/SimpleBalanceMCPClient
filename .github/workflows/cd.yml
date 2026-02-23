@@ -30,6 +30,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: "."
           target: ${{ secrets.APP_DIR }}
+          rm: true
 
       - name: Deploy on server with Docker Compose
         uses: appleboy/ssh-action@v1.0.3

@@ -34,16 +34,23 @@ spring:
     oauth2:
       client:
         registration:
-          mcp-auth:
+          mcp-client:
             client-id: ${CLIENT_ID:mcp-client}
             client-secret: ${CLIENT_SECRET:mcp-client-secret}
             authorization-grant-type: client_credentials
-            client-authentication-method: client_secret_basic
-            scope: openid,profile,read
-            provider: mcp-auth
+            scope: openid,profile,read,claudeai
+            provider: mcp-client
         provider:
-          mcp-auth:
+          mcp-client:
             token-uri: ${TOKEN_URL:http://localhost:9000/oauth2/token}
+
+logging:
+  level:
+    com.app.simplebalancemcpclient: ${LOGGING_LEVEL:WARN}
+    org.springframework.ai: ${LOGGING_LEVEL:WARN}
+    io.modelcontextprotocol: ${LOGGING_LEVEL:WARN}
+    org.springaicommunity: ${LOGGING_LEVEL:WARN}
+    org.springframework.security.oauth2: ${LOGGING_LEVEL:WARN}
 
 management:
   endpoints:

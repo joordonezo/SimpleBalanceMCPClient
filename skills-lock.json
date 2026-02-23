@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "springboot-security": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "7ee1660a84a1700bd1c1c82d77a417c02f09b53fa906ed4d2c36d7dd0e4e0305"
+    }
+  }
+}

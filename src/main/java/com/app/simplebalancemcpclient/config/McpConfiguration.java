@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.client.AuthorizedClientServiceOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 
 import java.time.Duration;
@@ -26,7 +27,7 @@ class McpConfiguration {
     ChatClient chatClient(ChatClient.Builder builder, ToolCallbackProvider toolCallbackProvider) {
         try {
             Arrays.stream(toolCallbackProvider.getToolCallbacks()).forEach(toolCallback ->
-                    log.info("Tool Callback Class: {}", toolCallback.getToolDefinition())
+                    log.debug("Tool Callback Class: {}", toolCallback.getToolDefinition())
             );
         } catch (Exception e) {
             log.warn("Could not load MCP tool callbacks at startup (will be loaded on-demand): {}", e.getMessage());
@@ -48,10 +49,16 @@ class McpConfiguration {
     AuthorizedClientServiceOAuth2AuthorizedClientManager authorizedClientManager(
             ClientRegistrationRepository clientRegistrationRepository
     ) {
-        return new AuthorizedClientServiceOAuth2AuthorizedClientManager(
+        var authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder.builder()
+                .clientCredentials()
+                .build();
+
+        var manager = new AuthorizedClientServiceOAuth2AuthorizedClientManager(
                 clientRegistrationRepository,
                 new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository)
         );
+        manager.setAuthorizedClientProvider(authorizedClientProvider);
+        return manager;
     }
 
     @Bean
@@ -60,7 +67,7 @@ class McpConfiguration {
     ) {
         return new OAuth2ClientCredentialsSyncHttpRequestCustomizer(
                 clientManager,
-                "mcp-auth"
+                "mcp-client"
         );
     }
 }
